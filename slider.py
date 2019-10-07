@@ -104,9 +104,9 @@ class Puzzle(object):
                 return soln
         return None
             
-p = Puzzle(2)
+p = Puzzle(3)
 print(p)
-soln = p.solve_random(10000)
+soln = p.solve_random(10000000)
 if soln:
     print(len(soln))
 else:
