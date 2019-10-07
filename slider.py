@@ -131,4 +131,4 @@ soln = p.solve_random(10000000)
 if soln:
     print(len(soln))
 else:
-    print("no solution")
+    print("no solution found")
