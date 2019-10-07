@@ -95,15 +95,36 @@ class Puzzle(object):
 
     def solve_random(self, nsteps):
         soln = []
+        visited = set()
+        nvisited = 0
         for _ in range(nsteps):
             ms = self.moves()
             m = random.choice(ms)
             soln.append(m)
             self.move(m)
             if self.solved():
+                print("nvisited:", nvisited)
                 return soln
+            if self in visited:
+                nvisited += 1
+            else:
+                visited.add(self)
         return None
             
+
+    def __eq__(self, other):
+        self.puzzle == other.puzzle
+            
+    def puzzle_list(self):
+        result = []
+        for row in self.puzzle:
+            for tile in row:
+                result.append(tile)
+        return result
+
+    def __hash__(self):
+        return hash(tuple(self.puzzle_list()))
+
 p = Puzzle(3)
 print(p)
 soln = p.solve_random(10000000)
