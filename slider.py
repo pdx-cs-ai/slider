@@ -79,8 +79,8 @@ class Puzzle(object):
 
     def target(self, t):
         n = self.n
-        i = t // n
-        j = t - n * i
+        i = (t - 1) // n
+        j = (t - 1) - n * i
         return (i, j)
 
     def solved(self):
@@ -89,7 +89,7 @@ class Puzzle(object):
             return False
         for t in range(n * n - 1):
             (i, j) = self.target(t)
-            if self.puzzle[i][j] != t + 1:
+            if self.puzzle[i][j] != t:
                 return False
         return True
 
