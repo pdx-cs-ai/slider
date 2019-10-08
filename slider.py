@@ -98,17 +98,33 @@ class Puzzle(object):
         visited = set()
         nvisited = 0
         for _ in range(nsteps):
-            ms = self.moves()
-            m = random.choice(ms)
-            soln.append(m)
-            self.move(m)
             if self.solved():
                 print("nvisited:", nvisited)
                 return soln
+
             if self in visited:
                 nvisited += 1
             else:
                 visited.add(self)
+
+            ms = self.moves()
+            mnv = []
+
+            for m in ms:
+                (f, t) = m
+                self.move((f, t))
+                if self not in visited:
+                    mnv.append(m)
+                self.move((t, f))
+
+            if mnv:
+                m = random.choice(mnv)
+            else:
+                m = random.choice(ms)
+
+            soln.append(m)
+            self.move(m)
+
         return None
             
 
