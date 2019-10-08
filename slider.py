@@ -85,6 +85,15 @@ class Puzzle(object):
         j = (t - 1) - n * i
         return (i, j)
 
+    def defect(self):
+        n = self.n
+        t = 0
+        for i in range(n):
+            for j in range(n):
+                (ti, tj) = self.target(self.puzzle[i][j])
+                t += abs(i - ti) + abs(j - tj)
+        return t
+
     def solved(self):
         n = self.n
         for t in range(n * n):
@@ -96,6 +105,7 @@ class Puzzle(object):
     def solve_dfs_id(self):
         d = 1
         while True:
+            # print("depth:", d)
             self.visited = set()
             soln = self.solve_dfs(depth=d)
             if soln != None:
@@ -113,7 +123,15 @@ class Puzzle(object):
 
         self.visited.add(hash(self))
 
+        def move_defect(m):
+            (f, t) = m
+            self.move((f, t))
+            result = self.defect()
+            self.move((t, f))
+            return result
+
         ms = self.moves()
+        ms.sort(key=move_defect)
         for m in ms:
             (f, t) = m
             self.move((f, t))
