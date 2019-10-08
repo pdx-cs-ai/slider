@@ -1,6 +1,16 @@
 #!/usr/bin/python3
 
 import random
+from collections import deque
+from copy import copy, deepcopy
+
+# https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
+def empty_copy(obj):
+    class Empty(obj.__class__):
+        def __init__(self): pass
+    newcopy = Empty()
+    newcopy.__class__ = obj.__class__
+    return newcopy
 
 # https://www.geeksforgeeks.org/check-instance-15-puzzle-solvable/
 def ok_parity(n, tiles):
@@ -41,6 +51,13 @@ class Puzzle(object):
         assert self.blank != None
         self.n = n
         self.puzzle = puzzle
+
+    def __copy__(self):
+        newcopy = empty_copy(self)
+        newcopy.puzzle = deepcopy(self.puzzle)
+        newcopy.n = self.n
+        newcopy.blank = self.blank
+        return newcopy
 
     def __str__(self):
         n = self.n
@@ -127,6 +144,36 @@ class Puzzle(object):
 
         return None
             
+    def solve_bfs(self):
+        start = copy(self)
+        start.parent = None
+        start.move = None
+        visited = {start}
+        q = deque()
+        q.appendleft(start)
+        while len(q) > 0:
+            s = q.pop()
+            ms = s.moves()
+            
+            for m in ms:
+                c = copy(s)
+                c.move(m)
+                if c.solved():
+                    soln = [m]
+                    while True:
+                        s = s.parent
+                        if not s:
+                            break
+                        soln.append(s.move)
+                    return list(reversed(soln))
+                if c not in visited:
+                    c.parent = s
+                    c.move = m
+                    visited.add(c)
+                    q.appendleft(c)
+
+        return None
+            
 
     def __eq__(self, other):
         self.puzzle == other.puzzle
@@ -143,7 +190,7 @@ class Puzzle(object):
 
 p = Puzzle(3)
 print(p)
-soln = p.solve_random(10000000)
+soln = p.solve_bfs()
 if soln:
     print(len(soln))
 else:
