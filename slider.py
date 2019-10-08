@@ -118,7 +118,8 @@ class Puzzle(object):
             (f, t) = m
             self.move((f, t))
 
-            if hash(self) not in self.visited:
+            h = hash(self)
+            if h not in self.visited:
                 if depth == None:
                     d = None
                 else:
@@ -126,7 +127,7 @@ class Puzzle(object):
                 soln = self.solve_dfs(depth = d)
                 if soln != None:
                     return [m] + soln
-                self.visited.add(hash(self))
+                self.visited.add(h)
 
             self.move((t, f))
 
