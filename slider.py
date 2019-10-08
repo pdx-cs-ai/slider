@@ -93,40 +93,44 @@ class Puzzle(object):
                 return False
         return True
 
-    def solve_random(self, nsteps):
-        soln = []
-        visited = set()
-        nvisited = 0
-        for _ in range(nsteps):
-            if self.solved():
-                print("nvisited:", nvisited)
+    def solve_dfs_id(self):
+        d = 1
+        while True:
+            self.visited = set()
+            soln = self.solve_dfs(depth=d)
+            if soln != None:
                 return soln
+            d += 1
+        assert False
+    
+    def solve_dfs(self, depth=None):
+        if self.solved():
+            print("nvisited:", len(self.visited))
+            return []
 
-            if self in visited:
-                nvisited += 1
-            else:
-                visited.add(self)
+        if depth == 0:
+            return None
 
-            ms = self.moves()
-            mnv = []
+        self.visited.add(hash(self))
 
-            for m in ms:
-                (f, t) = m
-                self.move((f, t))
-                if self not in visited:
-                    mnv.append(m)
-                self.move((t, f))
+        ms = self.moves()
+        for m in ms:
+            (f, t) = m
+            self.move((f, t))
 
-            if mnv:
-                m = random.choice(mnv)
-            else:
-                m = random.choice(ms)
+            if hash(self) not in self.visited:
+                if depth == None:
+                    d = None
+                else:
+                    d = depth - 1
+                soln = self.solve_dfs(depth = d)
+                if soln != None:
+                    return [m] + soln
+                self.visited.add(hash(self))
 
-            soln.append(m)
-            self.move(m)
+            self.move((t, f))
 
         return None
-            
 
     def __eq__(self, other):
         self.puzzle == other.puzzle
@@ -143,7 +147,7 @@ class Puzzle(object):
 
 p = Puzzle(3)
 print(p)
-soln = p.solve_random(10000000)
+soln = p.solve_dfs_id()
 if soln:
     print(len(soln))
 else:
