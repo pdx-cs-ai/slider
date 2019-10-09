@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import random
-from collections import deque
+import heapq
 from copy import copy, deepcopy
 
 # https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
@@ -31,6 +31,20 @@ def ok_parity(n, tiles):
     blankrow = blankpos // n
     return (blankrow & 1) != (inversions & 1)
 
+class Pstate(object):
+    def __init__(self, k, s):
+        self.k = k
+        self.s = s
+    
+    def __eq__(self, o):
+        self.k == o.k
+    
+    def __lt__(self, o):
+        self.k < o.k
+    
+    def state(self):
+        self.s
+
 class Puzzle(object):
 
     def __init__(self, n, sat=True):
@@ -51,12 +65,14 @@ class Puzzle(object):
         assert self.blank != None
         self.n = n
         self.puzzle = puzzle
+        self.g = 0
 
     def __copy__(self):
         newcopy = empty_copy(self)
         newcopy.puzzle = deepcopy(self.puzzle)
         newcopy.n = self.n
         newcopy.blank = self.blank
+        newcopy.g = self.g
         return newcopy
 
     def __str__(self):
@@ -110,33 +126,36 @@ class Puzzle(object):
                 return False
         return True
 
-    def solve_bfs(self):
+    def solve_astar(self):
         start = copy(self)
         start.parent = None
         start.move = None
-        visited = {start}
-        q = deque()
-        q.appendleft(start)
+        visited = {hash(start)}
+        q = []
+        heapq.heappush(q, Pstate(start.g, start))
         while len(q) > 0:
-            s = q.pop()
+            s = heapq.heappop(q).state()
+
+            if s.solved():
+                soln = []
+                while True:
+                    s = s.parent
+                    if not s:
+                        break
+                    soln.append(s.move)
+                return list(reversed(soln))
+
             ms = s.moves()
             
             for m in ms:
                 c = copy(s)
                 c.move(m)
-                if c.solved():
-                    soln = [m]
-                    while True:
-                        s = s.parent
-                        if not s:
-                            break
-                        soln.append(s.move)
-                    return list(reversed(soln))
                 if c not in visited:
                     c.parent = s
                     c.move = m
-                    visited.add(c)
-                    q.appendleft(c)
+                    c.g = s.g + 1
+                    visited.add(hash(c))
+                    heapq.heappush(q, Pstate(c.g, c))
 
         return None
             
@@ -156,7 +175,7 @@ class Puzzle(object):
 
 p = Puzzle(3)
 print(p)
-soln = p.solve_bfs()
+soln = p.solve_astar()
 if soln:
     print(len(soln))
 else:
