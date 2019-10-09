@@ -43,7 +43,7 @@ class Pstate(object):
         self.k < o.k
     
     def state(self):
-        self.s
+        return self.s
 
 class Puzzle(object):
 
@@ -150,7 +150,7 @@ class Puzzle(object):
             for m in ms:
                 c = copy(s)
                 c.move(m)
-                if c not in visited:
+                if hash(c) not in visited:
                     c.parent = s
                     c.move = m
                     c.g = s.g + 1
