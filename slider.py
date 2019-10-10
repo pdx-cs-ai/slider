@@ -3,6 +3,7 @@
 import random
 import heapq
 from copy import copy, deepcopy
+import functools
 
 # https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
 def empty_copy(obj):
@@ -31,19 +32,23 @@ def ok_parity(n, tiles):
     blankrow = blankpos // n
     return (blankrow & 1) != (inversions & 1)
 
+@functools.total_ordering
 class Pstate(object):
     def __init__(self, k, s):
         self.k = k
         self.s = s
     
     def __eq__(self, o):
-        self.k == o.k
+        return self.k == o.k
     
     def __lt__(self, o):
-        self.k < o.k
+        return self.k < o.k
     
     def state(self):
         return self.s
+
+    def key(self):
+        return self.k
 
 class Puzzle(object):
 
@@ -130,19 +135,30 @@ class Puzzle(object):
         start = copy(self)
         start.parent = None
         start.move = None
-        visited = {hash(start)}
+        visited = {hash(start): start}
         q = []
         heapq.heappush(q, Pstate(start.g, start))
-        while len(q) > 0:
+        while q:
+            sk = q[0].key()
             s = heapq.heappop(q).state()
+            # if q and q[0].state().g < s.g:
+            #     print("inversion", (sk, s.g), (q[0].key(), q[0].state().g))
+            #     exit(1)
 
             if s.solved():
                 soln = []
+                g = s.g
+                states = {s}
                 while True:
+                    if s.move:
+                        soln.append(s.move)
                     s = s.parent
-                    if not s:
+                    if not s.parent:
                         break
-                    soln.append(s.move)
+                    assert s not in states
+                    states.add(s)
+                    g -= 1
+                    assert g == s.g
                 return list(reversed(soln))
 
             ms = s.moves()
@@ -150,11 +166,16 @@ class Puzzle(object):
             for m in ms:
                 c = copy(s)
                 c.move(m)
-                if hash(c) not in visited:
+                h = hash(c)
+                new = h not in visited
+                update = not new and visited[h].g > s.g + 1
+                #if update:
+                #    print(c, visited[h].g, s.g + 1)
+                if new or update:
                     c.parent = s
                     c.move = m
                     c.g = s.g + 1
-                    visited.add(hash(c))
+                    visited[h] = c
                     heapq.heappush(q, Pstate(c.g, c))
 
         return None
@@ -176,7 +197,7 @@ class Puzzle(object):
 p = Puzzle(3)
 print(p)
 soln = p.solve_astar()
-if soln:
+if soln != None:
     print(len(soln))
 else:
     print("no solution found")
