@@ -131,19 +131,27 @@ class Puzzle(object):
                 return False
         return True
 
+    def defect(self):
+        n = self.n
+        t = 0
+        for i in range(n):
+            for j in range(n):
+                (ti, tj) = self.target(self.puzzle[i][j])
+                t += abs(i - ti) + abs(j - tj)
+        return t
+
     def solve_astar(self):
         start = copy(self)
         start.parent = None
         start.move = None
         visited = {hash(start): start}
         q = []
-        heapq.heappush(q, Pstate(start.g, start))
+        start.h = start.defect()
+        start.f = start.g + start.h
+        heapq.heappush(q, Pstate(start.f, start))
         while q:
             sk = q[0].key()
             s = heapq.heappop(q).state()
-            # if q and q[0].state().g < s.g:
-            #     print("inversion", (sk, s.g), (q[0].key(), q[0].state().g))
-            #     exit(1)
 
             if s.solved():
                 soln = []
@@ -166,17 +174,16 @@ class Puzzle(object):
             for m in ms:
                 c = copy(s)
                 c.move(m)
-                h = hash(c)
-                new = h not in visited
-                update = not new and visited[h].g > s.g + 1
-                #if update:
-                #    print(c, visited[h].g, s.g + 1)
-                if new or update:
+                hh = hash(c)
+                c.g = s.g + 1
+                c.h = c.defect()
+                c.f = c.g + c.h
+                if hh not in visited or visited[hh].f > s.f:
                     c.parent = s
                     c.move = m
-                    c.g = s.g + 1
-                    visited[h] = c
-                    heapq.heappush(q, Pstate(c.g, c))
+                    visited[hh] = c
+                    # print(c.g, c.h, c.f)
+                    heapq.heappush(q, Pstate(c.f, c))
 
         return None
             
