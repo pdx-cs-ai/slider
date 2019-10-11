@@ -119,8 +119,9 @@ class Puzzle(object):
         n = self.n
         if t == 0:
             return (n - 1, n - 1)
-        i = (t - 1) // n
-        j = (t - 1) - n * i
+        t -= 1
+        i = t // n
+        j = t - n * i
         return (i, j)
 
     def solved(self):
@@ -133,15 +134,15 @@ class Puzzle(object):
 
     def defect(self):
         n = self.n
-        t = 0
+        d = 0
         for i in range(n):
             for j in range(n):
                 t = self.puzzle[i][j]
                 if t == 0:
                     continue
                 (ti, tj) = self.target(t)
-                t += abs(i - ti) + abs(j - tj)
-        return t
+                d += abs(i - ti) + abs(j - tj)
+        return d
 
     def solve_astar(self):
         start = copy(self)
@@ -185,7 +186,7 @@ class Puzzle(object):
                     c.parent = s
                     c.move = m
                     visited[hh] = c
-                    print(c.g, c.h, c.f)
+                    #print(c.g, c.h, c.f)
                     heapq.heappush(q, Pstate(c.f, c))
 
         return None
