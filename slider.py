@@ -136,7 +136,10 @@ class Puzzle(object):
         t = 0
         for i in range(n):
             for j in range(n):
-                (ti, tj) = self.target(self.puzzle[i][j])
+                t = self.puzzle[i][j]
+                if t == 0:
+                    continue
+                (ti, tj) = self.target(t)
                 t += abs(i - ti) + abs(j - tj)
         return t
 
@@ -182,7 +185,7 @@ class Puzzle(object):
                     c.parent = s
                     c.move = m
                     visited[hh] = c
-                    # print(c.g, c.h, c.f)
+                    print(c.g, c.h, c.f)
                     heapq.heappush(q, Pstate(c.f, c))
 
         return None
