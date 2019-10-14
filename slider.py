@@ -306,6 +306,64 @@ class Puzzle(object):
         # No solution exists.
         return None
 
+    # Solve via depth-first iterative deepening.
+    def solve_dfid(self):
+        # Increase the depth repeatedly.
+        d = 1
+        while True:
+            # Reset the stop list.
+            self.visited = set()
+            # Try solving at this depth.
+            soln = self.solve_dfs(depth=d)
+            if soln != None:
+                return soln
+            d += 1
+        # Should never get here.
+        assert False
+    
+    # Solve via depth-first search with optional depth
+    # limit.
+    def solve_dfs(self, depth=None):
+        # Stop if solved.
+        if self.solved():
+            print("nvisited:", len(self.visited))
+            return []
+
+        # Out of depth, so stop early.
+        if depth == 0:
+            return None
+
+        # Augment stop list.
+        self.visited.add(hash(self))
+
+        # Recursive search.
+        ms = self.moves()
+        for m in ms:
+            # Do-undo.
+            (f, t) = m
+            self.move((f, t))
+
+            # If new state, search it.
+            h = hash(self)
+            if h not in self.visited:
+                # Update depth if needed.
+                if depth == None:
+                    d = None
+                else:
+                    d = depth - 1
+
+                # Recursively solve.
+                soln = self.solve_dfs(depth = d)
+                if soln != None:
+                    return [m] + soln
+                self.visited.add(h)
+
+            # Undo.
+            self.move((t, f))
+
+        # No solution found here.
+        return None
+
 # Process arguments.
 parser = argparse.ArgumentParser(description='Solve Sliding Tile Puzzle.')
 parser.add_argument('-n', type=int,
@@ -318,6 +376,7 @@ solvers = {
     "random",
     "walk",
     "bfs",
+    "dfid",
 }
 # https://stackoverflow.com/a/27529806
 parser.add_argument('--solver', '-s',
@@ -341,6 +400,8 @@ elif solver == "walk":
     soln = p.solve_walk((1000 * n)**2, noise)
 elif solver == "bfs":
     soln = p.solve_bfs()
+elif solver == "dfid":
+    soln = p.solve_dfid()
 else:
     assert False
 

@@ -17,3 +17,5 @@ Solvers:
   moves, no tabu list
 
 * bfs: Complete breadth-first-search with stop list.
+
+* dfid: Depth-first iterative deepening with stop list.
