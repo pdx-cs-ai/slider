@@ -22,3 +22,5 @@ Solvers:
 
 * dfs: Complete depth-first search with heuristic move
   ordering and stop list.
+
+* astar: Complete A* search.

@@ -2,8 +2,11 @@
 
 # Generate and solve a sliding tile puzzle.
 
-import random
 import argparse
+import functools
+import heapq
+import random
+
 from collections import deque
 from copy import copy, deepcopy
 
@@ -36,6 +39,25 @@ def ok_parity(n, tiles):
     blankrow = blankpos // n
     return (blankrow & 1) != (inversions & 1)
 
+# A* state for puzzle, so that keying works with hqueue
+@functools.total_ordering
+class Pstate(object):
+    def __init__(self, k, s):
+        self.k = k
+        self.s = s
+    
+    def __eq__(self, o):
+        return self.k == o.k
+    
+    def __lt__(self, o):
+        return self.k < o.k
+    
+    def state(self):
+        return self.s
+
+    def key(self):
+        return self.k
+
 class Puzzle(object):
 
     # Create a random puzzle
@@ -64,6 +86,7 @@ class Puzzle(object):
         self.n = n
         self.puzzle = puzzle
         self.visited = set()
+        self.g = 0
 
     # Return a copy of this state.
     def __copy__(self):
@@ -71,6 +94,7 @@ class Puzzle(object):
         newcopy.puzzle = deepcopy(self.puzzle)
         newcopy.n = self.n
         newcopy.blank = self.blank
+        newcopy.g = self.g
         return newcopy
 
     # Produce a printable representation of the puzzle.
@@ -374,6 +398,63 @@ class Puzzle(object):
         # No solution found here.
         return None
 
+    # Solve via A* search.
+    def solve_astar(self):
+        # Set up start state as with BFS.
+        start = copy(self)
+        start.parent = None
+        start.move = None
+        # Stop list needs to be dictionary so states
+        # can be updated/reopened.
+        visited = {hash(start): start}
+
+        # Set up the heapq and start A*.
+        q = []
+        start.h = start.defect()
+        start.f = start.g + start.h
+        heapq.heappush(q, Pstate(start.f, start))
+        while q:
+            # Get best state via f = g + h.
+            sk = q[0].key()
+            s = heapq.heappop(q).state()
+
+            # If solved, reconstruct and return the
+            # solution.
+            if s.solved():
+                soln = []
+                g = s.g
+                states = {s}
+                while True:
+                    if s.move:
+                        soln.append(s.move)
+                    s = s.parent
+                    if not s.parent:
+                        break
+                    assert s not in states
+                    states.add(s)
+                    g -= 1
+                    assert g == s.g
+                return list(reversed(soln))
+
+            # Expand the children.
+            ms = s.moves()
+            for m in ms:
+                c = copy(s)
+                c.move(m)
+                c.g = s.g + 1
+                c.h = c.defect()
+                c.f = c.g + c.h
+
+                # Only expand unvisited or re-expand states.
+                hh = hash(c)
+                if hh not in visited or visited[hh].f > s.f:
+                    c.parent = s
+                    c.move = m
+                    visited[hh] = c
+                    heapq.heappush(q, Pstate(c.f, c))
+
+        return None
+
 # Process arguments.
 parser = argparse.ArgumentParser(description='Solve Sliding Tile Puzzle.')
 parser.add_argument('-n', type=int,
@@ -388,6 +469,7 @@ solvers = {
     "bfs",
     "dfs",
     "dfid",
+    "astar"
 }
 # https://stackoverflow.com/a/27529806
 parser.add_argument('--solver', '-s',
@@ -415,6 +497,8 @@ elif solver == "dfid":
     soln = p.solve_dfid()
 elif solver == "dfs":
     soln = p.solve_dfs(heur=True)
+elif solver == "astar":
+    soln = p.solve_astar()
 else:
     assert False
 
