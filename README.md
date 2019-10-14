@@ -19,3 +19,6 @@ Solvers:
 * bfs: Complete breadth-first-search with stop list.
 
 * dfid: Depth-first iterative deepening with stop list.
+
+* dfs: Complete depth-first search with heuristic move
+  ordering and stop list.

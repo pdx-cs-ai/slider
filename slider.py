@@ -63,6 +63,7 @@ class Puzzle(object):
         assert self.blank != None
         self.n = n
         self.puzzle = puzzle
+        self.visited = set()
 
     # Return a copy of this state.
     def __copy__(self):
@@ -323,7 +324,7 @@ class Puzzle(object):
     
     # Solve via depth-first search with optional depth
     # limit.
-    def solve_dfs(self, depth=None):
+    def solve_dfs(self, depth=None, heur=False):
         # Stop if solved.
         if self.solved():
             print("nvisited:", len(self.visited))
@@ -336,8 +337,17 @@ class Puzzle(object):
         # Augment stop list.
         self.visited.add(hash(self))
 
+        def move_defect(m):
+            (f, t) = m
+            self.move((f, t))
+            result = self.defect()
+            self.move((t, f))
+            return result
+
         # Recursive search.
         ms = self.moves()
+        if heur:
+            ms.sort(key=move_defect)
         for m in ms:
             # Do-undo.
             (f, t) = m
@@ -376,6 +386,7 @@ solvers = {
     "random",
     "walk",
     "bfs",
+    "dfs",
     "dfid",
 }
 # https://stackoverflow.com/a/27529806
@@ -402,6 +413,8 @@ elif solver == "bfs":
     soln = p.solve_bfs()
 elif solver == "dfid":
     soln = p.solve_dfid()
+elif solver == "dfs":
+    soln = p.solve_dfs(heur=True)
 else:
     assert False
 
