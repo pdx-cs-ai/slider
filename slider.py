@@ -346,15 +346,14 @@ class Puzzle(object):
     # Solve via depth-first iterative deepening.
     def solve_dfid(self):
         # Increase the depth repeatedly.
-        d = 1
-        while True:
+        for d in range(1, 500):
             # Reset the stop list.
-            self.visited = set()
+            self.visited = dict()
             # Try solving at this depth.
             soln = self.solve_dfs(depth=d)
             if soln != None:
+                assert len(soln) == d
                 return soln
-            d += 1
         # Should never get here.
         assert False
     
@@ -367,11 +366,11 @@ class Puzzle(object):
             return []
 
         # Out of depth, so stop early.
-        if depth == 0:
+        if depth <= 0:
             return None
 
         # Augment stop list.
-        self.visited.add(hash(self))
+        self.visited[hash(self)] = depth
 
         def move_defect(m):
             (f, t) = m
@@ -379,6 +378,12 @@ class Puzzle(object):
             result = self.defect()
             self.move((t, f))
             return result
+
+        # Find next depth.
+        if depth == None:
+            d = None
+        else:
+            d = depth - 1
 
         # Recursive search.
         ms = self.moves()
@@ -392,17 +397,12 @@ class Puzzle(object):
             # If new state, search it.
             h = hash(self)
             if h not in self.visited:
-                # Update depth if needed.
-                if depth == None:
-                    d = None
-                else:
-                    d = depth - 1
-
                 # Recursively solve.
-                soln = self.solve_dfs(depth = d)
+                soln = self.solve_dfs(depth=d, heur=heur)
                 if soln != None:
+                    # Undo.
+                    self.move((t, f))
                     return [m] + soln
-                self.visited.add(h)
 
             # Undo.
             self.move((t, f))
