@@ -2,6 +2,8 @@
 
 import random
 
+noise = 0.0
+
 # https://www.geeksforgeeks.org/check-instance-15-puzzle-solvable/
 def ok_parity(n, tiles):
     n2 = len(tiles)
@@ -81,8 +83,9 @@ class Puzzle(object):
         n = self.n
         if t == 0:
             return (n - 1, n - 1)
-        i = (t - 1) // n
-        j = (t - 1) - n * i
+        t -= 1
+        i = t // n
+        j = t - n * i
         return (i, j)
 
     def solved(self):
@@ -93,33 +96,43 @@ class Puzzle(object):
                 return False
         return True
 
+    def defect(self):
+        n = self.n
+        d = 0
+        for i in range(n):
+            for j in range(n):
+                t = self.puzzle[i][j]
+                if t == 0:
+                    continue
+                (ti, tj) = self.target(t)
+                d += abs(i - ti) + abs(j - tj)
+        return d
+
     def solve_random(self, nsteps):
         soln = []
-        visited = set()
         nvisited = 0
         for _ in range(nsteps):
             if self.solved():
                 print("nvisited:", nvisited)
                 return soln
 
-            if self in visited:
-                nvisited += 1
-            else:
-                visited.add(self)
+            nvisited += 1
 
             ms = self.moves()
             mnv = []
 
-            for m in ms:
-                (f, t) = m
-                self.move((f, t))
-                if self not in visited:
-                    mnv.append(m)
-                self.move((t, f))
-
-            if mnv:
-                m = random.choice(mnv)
+            if random.random() < noise:
+                m = random.choice(ms)
             else:
+                for m in ms:
+                    (f, t) = m
+                    self.move((f, t))
+                    d = self.defect()
+                    mnv.append((d, m))
+                    self.move((t, f))
+
+                md = min(mnv, key=lambda m: m[0])
+                ms = [m[1] for m in mnv if m[0] == md[0]]
                 m = random.choice(ms)
 
             soln.append(m)
@@ -141,7 +154,7 @@ class Puzzle(object):
     def __hash__(self):
         return hash(tuple(self.puzzle_list()))
 
-p = Puzzle(3)
+p = Puzzle(4)
 print(p)
 soln = p.solve_random(10000000)
 if soln:
