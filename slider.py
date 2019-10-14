@@ -60,26 +60,39 @@ class Pstate(object):
 
 class Puzzle(object):
 
-    # Create a random puzzle
-    def __init__(self, n, sat=True):
-        # Build a puzzle uniformly selected from
-        # the space of puzzles with given solvability.
-        tiles = [i for i in range(n**2)]
-        random.shuffle(tiles)
-        while sat != ok_parity(n, tiles):
+    # Create a puzzle
+    def __init__(self, n, sat=True, tiles=None):
+        if tiles == None:
+            # Build a puzzle uniformly selected from
+            # the space of puzzles with given solvability.
+            tiles = [i for i in range(n**2)]
             random.shuffle(tiles)
+            while sat != ok_parity(n, tiles):
+                random.shuffle(tiles)
 
-        # Square up the puzzle and find the blank.
-        puzzle = []
-        self.blank = None
-        for i in range(n):
-            row = []
-            for j in range(n):
-                tile = tiles[n * i + j]
-                row.append(tile)
-                if tile == 0:
-                    self.blank = (i, j)
-            puzzle.append(row)
+            # Square up the puzzle and find the blank.
+            puzzle = []
+            self.blank = None
+            for i in range(n):
+                row = []
+                for j in range(n):
+                    tile = tiles[n * i + j]
+                    row.append(tile)
+                    if tile == 0:
+                        self.blank = (i, j)
+                puzzle.append(row)
+        else:
+            # Do some rudimentary checks on supplied puzzle
+            # and find the blank.
+            puzzle = tiles
+            self.blank = None
+            assert len(puzzle) == n
+            for i in range(len(puzzle)):
+                nj = len(puzzle[i])
+                assert nj == n
+                for j in range(nj):
+                    if puzzle[i][j] == 0:
+                        self.blank = (i, j)
 
         # Finish initialization.
         assert self.blank != None
@@ -110,7 +123,6 @@ class Puzzle(object):
                     result += "{:2} ".format(tile)
             result += "\n"
         return result
-    
 
     # Just compare the puzzle itself.
     def __eq__(self, other):
@@ -455,10 +467,20 @@ class Puzzle(object):
 
         return None
 
+def read_puzzle(filename):
+    puzzle = []
+    with open(filename, "r") as f:
+        for row in f:
+            tiles = [int(i) for i in row.split()]
+            puzzle.append(tiles)
+    return puzzle
+
 # Process arguments.
 parser = argparse.ArgumentParser(description='Solve Sliding Tile Puzzle.')
 parser.add_argument('-n', type=int,
                     default=3, help='length of side')
+parser.add_argument('--file', '-f', type=str,
+                    default=None, help='file to read puzzle from')
 parser.add_argument('--verbose', '-v',
                     action="store_true", help='show full solution')
 parser.add_argument('--unsat', '-u',
@@ -483,9 +505,15 @@ solver = args.solver
 full = args.verbose
 sat = not args.unsat
 noise = args.noise
+if args.file == None:
+    # Build a random puzzle.
+    p = Puzzle(n, sat=sat)
+else:
+    puzzle = read_puzzle(args.file)
+    n = len(puzzle)
+    p = Puzzle(n, tiles=puzzle)
 
-# Build a random puzzle and run the solver.
-p = Puzzle(n, sat=sat)
+# Run the solver.
 print(p)
 if solver == "random":
     soln = p.solve_random((1000 * n)**2)
