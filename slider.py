@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import random
+import argparse
 
 # https://www.geeksforgeeks.org/check-instance-15-puzzle-solvable/
 def ok_parity(n, tiles):
@@ -141,10 +142,36 @@ class Puzzle(object):
     def __hash__(self):
         return hash(tuple(self.puzzle_list()))
 
-p = Puzzle(3)
+# Process arguments.
+parser = argparse.ArgumentParser(description='Solve Sliding Tile Puzzle.')
+parser.add_argument('-n', type=int,
+                    default=3, help='length of side')
+parser.add_argument('--solution', '-s',
+                    action="store_true", help='show full solution')
+solvers = {
+    "random"
+}
+# https://stackoverflow.com/a/27529806
+parser.add_argument('--solver', '-c',
+                    type=str, choices=solvers,
+                    default="random", help='solver algorithm')
+args = parser.parse_args()
+n = args.n
+solver = args.solver
+full = args.solution
+
+p = Puzzle(n)
 print(p)
-soln = p.solve_random(10000000)
+if solver == "random":
+    soln = p.solve_random((1000 * n)**2)
+else:
+    assert False
+
 if soln:
-    print(len(soln))
+    if full:
+        for m in soln:
+            print(m)
+    else:
+        print(len(soln))
 else:
     print("no solution found")
