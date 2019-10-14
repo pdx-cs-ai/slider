@@ -4,6 +4,17 @@
 
 import random
 import argparse
+from collections import deque
+from copy import copy, deepcopy
+
+# Make a copy of an object with the given class but no fields.
+# https://www.oreilly.com/library/view/python-cookbook/0596001673/ch05s12.html
+def empty_copy(obj):
+    class Empty(obj.__class__):
+        def __init__(self): pass
+    newcopy = Empty()
+    newcopy.__class__ = obj.__class__
+    return newcopy
 
 # Returns True iff the puzzle is solvable.
 # https://www.geeksforgeeks.org/check-instance-15-puzzle-solvable/
@@ -53,6 +64,14 @@ class Puzzle(object):
         self.n = n
         self.puzzle = puzzle
 
+    # Return a copy of this state.
+    def __copy__(self):
+        newcopy = empty_copy(self)
+        newcopy.puzzle = deepcopy(self.puzzle)
+        newcopy.n = self.n
+        newcopy.blank = self.blank
+        return newcopy
+
     # Produce a printable representation of the puzzle.
     def __str__(self):
         n = self.n
@@ -67,6 +86,23 @@ class Puzzle(object):
             result += "\n"
         return result
     
+
+    # Just compare the puzzle itself.
+    def __eq__(self, other):
+        self.puzzle == other.puzzle
+            
+    # Turn the square puzzle into a linear list.
+    def puzzle_list(self):
+        result = []
+        for row in self.puzzle:
+            for tile in row:
+                result.append(tile)
+        return result
+
+    # Hash is just hash of puzzle list.
+    def __hash__(self):
+        return hash(tuple(self.puzzle_list()))
+
     # Return a list of legal moves in the current position.
     # Moves are given as start-end tuples.
     def moves(self):
@@ -178,7 +214,6 @@ class Puzzle(object):
             self.move(m)
 
         return None
-            
 
     # Solve by random walk without tabu list, but with noise
     # moves.
@@ -222,21 +257,54 @@ class Puzzle(object):
         # Ran out of steps.
         return None
 
-    # Just compare the puzzle itself.
-    def __eq__(self, other):
-        self.puzzle == other.puzzle
-            
-    # Turn the square puzzle into a linear list.
-    def puzzle_list(self):
-        result = []
-        for row in self.puzzle:
-            for tile in row:
-                result.append(tile)
-        return result
+    # Solve by breadth-first search with an explicit queue
+    # and stop list.
+    def solve_bfs(self):
+        # Don't mess up this state, just make a new start
+        # state.
+        start = copy(self)
+        start.parent = None
+        start.move = None
+        visited = {hash(start)}
 
-    # Hash is just hash of puzzle list.
-    def __hash__(self):
-        return hash(tuple(self.puzzle_list()))
+        # Run the BFS.
+        q = deque()
+        q.appendleft(start)
+        while len(q) > 0:
+            # Get next state to expand.
+            s = q.pop()
+
+            # Try to expand each child.
+            ms = s.moves()
+            for m in ms:
+                # Make the child.
+                c = copy(s)
+                c.move(m)
+
+                # Found a solution. Reconstruct and return
+                # it.
+                if c.solved():
+                    soln = [m]
+                    while True:
+                        s = s.parent
+                        if not s:
+                            break
+                        soln.append(s.move)
+                    return list(reversed(soln))
+
+                # Don't re-expand a closed state.
+                h = hash(c)
+                if h in visited:
+                    continue
+                
+                # Expand and enqueue this child.
+                c.parent = s
+                c.move = m
+                visited.add(h)
+                q.appendleft(c)
+
+        # No solution exists.
+        return None
 
 # Process arguments.
 parser = argparse.ArgumentParser(description='Solve Sliding Tile Puzzle.')
@@ -249,6 +317,7 @@ parser.add_argument('--unsat', '-u',
 solvers = {
     "random",
     "walk",
+    "bfs",
 }
 # https://stackoverflow.com/a/27529806
 parser.add_argument('--solver', '-s',
@@ -270,6 +339,8 @@ if solver == "random":
     soln = p.solve_random((1000 * n)**2)
 elif solver == "walk":
     soln = p.solve_walk((1000 * n)**2, noise)
+elif solver == "bfs":
+    soln = p.solve_bfs()
 else:
     assert False
 
