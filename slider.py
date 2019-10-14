@@ -116,6 +116,18 @@ class Puzzle(object):
                 return False
         return True
 
+    def defect(self):
+        n = self.n
+        d = 0
+        for i in range(n):
+            for j in range(n):
+                t = self.puzzle[i][j]
+                if t == 0:
+                    continue
+                (ti, tj) = self.target(t)
+                d += abs(i - ti) + abs(j - tj)
+        return d
+
     # Do a random walk through the state space, attempting
     # to avoid previously-visited states when possible.
     def solve_random(self, nsteps):
@@ -168,6 +180,48 @@ class Puzzle(object):
         return None
             
 
+    # Solve by random walk without tabu list, but with noise
+    # moves.
+    def solve_walk(self, nsteps, noise):
+        # Moves in solution.
+        soln = []
+
+        # Walk the state space.
+        for nvisited in range(nsteps):
+            # Stop if at goal.
+            if self.solved():
+                print("nvisited:", nvisited + 1)
+                return soln
+
+            # Select from legal moves.
+            ms = self.moves()
+            if random.random() < noise:
+                # Noise case. Select a random move.
+                m = random.choice(ms)
+            else:
+                # Greedy case. Select a move with smallest
+                # defect.
+                mnv = []
+                for m in ms:
+                    # Do-undo.
+                    (f, t) = m
+                    self.move((f, t))
+                    d = self.defect()
+                    mnv.append((d, m))
+                    self.move((t, f))
+
+                # Prune off defects for selection.
+                md = min(mnv, key=lambda m: m[0])
+                ms = [m[1] for m in mnv if m[0] == md[0]]
+                m = random.choice(ms)
+
+            # Make and record the move.
+            soln.append(m)
+            self.move(m)
+
+        # Ran out of steps.
+        return None
+
     # Just compare the puzzle itself.
     def __eq__(self, other):
         self.puzzle == other.puzzle
@@ -193,23 +247,29 @@ parser.add_argument('--verbose', '-v',
 parser.add_argument('--unsat', '-u',
                     action="store_true", help='use unsat puzzle')
 solvers = {
-    "random"
+    "random",
+    "walk",
 }
 # https://stackoverflow.com/a/27529806
 parser.add_argument('--solver', '-s',
                     type=str, choices=solvers,
                     default="random", help='solver algorithm')
+parser.add_argument('--noise', type=float,
+                    default=0.5, help='noise for walk')
 args = parser.parse_args()
 n = args.n
 solver = args.solver
 full = args.verbose
 sat = not args.unsat
+noise = args.noise
 
 # Build a random puzzle and run the solver.
 p = Puzzle(n, sat=sat)
 print(p)
 if solver == "random":
     soln = p.solve_random((1000 * n)**2)
+elif solver == "walk":
+    soln = p.solve_walk((1000 * n)**2, noise)
 else:
     assert False
 
