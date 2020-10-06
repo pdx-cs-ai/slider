@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-
 # Generate and solve a sliding tile puzzle.
+# Bart Massey 2020
 
 import argparse
 import functools
@@ -203,7 +203,7 @@ class Puzzle(object):
 
     # Do a random walk through the state space, attempting
     # to avoid previously-visited states when possible.
-    def solve_random(self, nsteps):
+    def solve_random(self, nsteps, tabu=False):
         # Moves of solution.
         soln = []
         # Set of hashes of visited states.
@@ -220,27 +220,29 @@ class Puzzle(object):
                 print("nrevisited:", nrevisited)
                 return soln
 
-            # Check whether in a visited state.
-            if hash(self) in visited:
-                nrevisited += 1
-            else:
-                visited.add(hash(self))
+            if tabu:
+                # Check whether in a visited state.
+                if hash(self) in visited:
+                    nrevisited += 1
+                else:
+                    visited.add(hash(self))
 
             # Get legal moves from here and
             # pick one.
             ms = self.moves()
             # Unvisited moves.
             mnv = []
-            for m in ms:
-                # Do-undo.
-                (f, t) = m
-                self.move((f, t))
-                if hash(self) not in visited:
-                    mnv.append(m)
-                self.move((t, f))
+            if tabu:
+                for m in ms:
+                    # Do-undo.
+                    (f, t) = m
+                    self.move((f, t))
+                    if hash(self) not in visited:
+                        mnv.append(m)
+                    self.move((t, f))
 
             # Try to visit someplace new.
-            if mnv:
+            if mnv != []:
                 m = random.choice(mnv)
             else:
                 m = random.choice(ms)
@@ -250,6 +252,7 @@ class Puzzle(object):
             soln.append(m)
             self.move(m)
 
+        # Ran out of moves.
         return None
 
     # Solve by random walk without tabu list, but with noise
@@ -487,6 +490,7 @@ parser.add_argument('--unsat', '-u',
                     action="store_true", help='use unsat puzzle')
 solvers = {
     "random",
+    "tabu",
     "walk",
     "bfs",
     "dfs",
@@ -517,6 +521,8 @@ else:
 print(p)
 if solver == "random":
     soln = p.solve_random((1000 * n)**2)
+elif solver == "tabu":
+    soln = p.solve_random((1000 * n)**2, tabu=True)
 elif solver == "walk":
     soln = p.solve_walk((1000 * n)**2, noise)
 elif solver == "bfs":
