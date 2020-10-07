@@ -355,14 +355,14 @@ class Puzzle(object):
             print("depth", d)
             # Try solving at this depth.
             try:
-                soln = self.solve_dfs(depth=d, heur=True)
+                soln = self.solve_dfs(depth=d)
             except DepthException:
                 # Ran out of depth.
                 continue
             # Problem solved.
             if soln is not None:
-                print(soln)
-                assert len(soln) == d
+                if len(soln) != d:
+                    print("bad length", len(soln), d)
             return soln
 
         # Should never get here.
@@ -376,27 +376,15 @@ class Puzzle(object):
         start = copy(self)
         start.parent = None
         start.moved = None
-        visited = set()
+        start.depth = 0
+        visited = {hash(start)}
         stack = [start]
-        depth -= 1
         limit = False
 
         # Run the DFS.
         while stack:
             # Get next state to expand.
             s = stack.pop()
-
-            # Don't re-expand a closed state.
-            h = hash(s)
-            if h in visited:
-                continue
-            visited.add(h)
-
-            # Check depth.
-            if depth is not None:
-                if len(stack) > depth:
-                    limit = True
-                    continue
 
             # Try to expand each child.
             ms = s.moves()
@@ -430,9 +418,23 @@ class Puzzle(object):
                     soln.append(m)
                     return list(reversed(soln))
                 
+                # Don't re-expand a closed state.
+                h = hash(c)
+                if h in visited:
+                    continue
+
                 # Expand and stack this child.
                 c.parent = s
                 c.moved = m
+                c.depth = s.depth + 1
+
+                # Check depth.
+                if depth is not None:
+                    if c.depth >= depth:
+                        limit = True
+                        continue
+
+                visited.add(h)
                 stack.append(c)
 
         if limit:
