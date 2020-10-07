@@ -352,14 +352,16 @@ class Puzzle(object):
         d = 0
         while True:
             d += 1
+            print("depth", d)
             # Try solving at this depth.
             try:
-                soln = self.solve_dfs(depth=d)
+                soln = self.solve_dfs(depth=d, heur=True)
             except DepthException:
                 # Ran out of depth.
                 continue
             # Problem solved.
             if soln is not None:
+                print(soln)
                 assert len(soln) == d
             return soln
 
@@ -374,15 +376,27 @@ class Puzzle(object):
         start = copy(self)
         start.parent = None
         start.moved = None
-        visited = {hash(start)}
+        visited = set()
         stack = [start]
+        depth -= 1
+        limit = False
 
         # Run the DFS.
         while stack:
             # Get next state to expand.
             s = stack.pop()
+
+            # Don't re-expand a closed state.
+            h = hash(s)
+            if h in visited:
+                continue
+            visited.add(h)
+
+            # Check depth.
             if depth is not None:
-                depth += 1
+                if len(stack) > depth:
+                    limit = True
+                    continue
 
             # Try to expand each child.
             ms = s.moves()
@@ -409,31 +423,21 @@ class Puzzle(object):
                 # Found a solution. Reconstruct and return
                 # it.
                 if c.solved():
-                    soln = [m]
-                    while True:
-                        s = s.parent
-                        if not s:
-                            break
+                    soln = []
+                    while s.moved:
                         soln.append(s.moved)
+                        s = s.parent
+                    soln.append(m)
                     return list(reversed(soln))
-
-                # Don't re-expand a closed state.
-                h = hash(c)
-                if h in visited:
-                    continue
                 
-                # Adjust and check depth.
-                if depth is not None:
-                    depth -= 1
-                    if depth <= 0:
-                        raise DepthException
-
                 # Expand and stack this child.
                 c.parent = s
                 c.moved = m
-                visited.add(h)
                 stack.append(c)
 
+        if limit:
+            raise DepthException
+        return None
 
     # Solve via A* search.
     def solve_astar(self):
