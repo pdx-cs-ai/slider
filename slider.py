@@ -2,10 +2,7 @@
 # Generate and solve a sliding tile puzzle.
 # Bart Massey 2020
 
-import argparse
-import functools
-import heapq
-import random
+import argparse, functools, heapq, random, sys
 
 from collections import deque
 from copy import copy, deepcopy
@@ -58,6 +55,10 @@ class Pstate(object):
     def key(self):
         return self.k
 
+# Exception for depth-limited DFS.
+class DepthException(Exception):
+    pass
+
 class Puzzle(object):
 
     # Create a puzzle
@@ -98,7 +99,6 @@ class Puzzle(object):
         assert self.blank != None
         self.n = n
         self.puzzle = puzzle
-        self.visited = set()
         self.g = 0
 
     # Return a copy of this state.
@@ -168,7 +168,7 @@ class Puzzle(object):
         self.puzzle[xi][xj] = self.puzzle[i][j]
         self.puzzle[i][j] = tmp
         
-        self.blank = (xi, xj)
+        self.blank = m[0]
 
     # Return the coordinates the given tile would
     # have in a solved puzzle.
@@ -304,7 +304,7 @@ class Puzzle(object):
         # state.
         start = copy(self)
         start.parent = None
-        start.move = None
+        start.moved = None
         visited = {hash(start)}
 
         # Run the BFS.
@@ -329,7 +329,7 @@ class Puzzle(object):
                         s = s.parent
                         if not s:
                             break
-                        soln.append(s.move)
+                        soln.append(s.moved)
                     return list(reversed(soln))
 
                 # Don't re-expand a closed state.
@@ -339,7 +339,7 @@ class Puzzle(object):
                 
                 # Expand and enqueue this child.
                 c.parent = s
-                c.move = m
+                c.moved = m
                 visited.add(h)
                 q.appendleft(c)
 
@@ -349,76 +349,96 @@ class Puzzle(object):
     # Solve via depth-first iterative deepening.
     def solve_dfid(self):
         # Increase the depth repeatedly.
-        for d in range(1, 500):
-            # Reset the stop list.
-            self.visited = dict()
+        d = 0
+        while True:
+            d += 1
             # Try solving at this depth.
-            soln = self.solve_dfs(depth=d)
-            if soln != None:
+            try:
+                soln = self.solve_dfs(depth=d)
+            except DepthException:
+                # Ran out of depth.
+                continue
+            # Problem solved.
+            if soln is not None:
                 assert len(soln) == d
-                return soln
+            return soln
+
         # Should never get here.
         assert False
     
     # Solve via depth-first search with optional depth
-    # limit.
+    # limit. Explicit stack because Python.
     def solve_dfs(self, depth=None, heur=False):
-        # Stop if solved.
-        if self.solved():
-            print("nvisited:", len(self.visited))
-            return []
+        # Don't mess up this state, just make a new start
+        # state.
+        start = copy(self)
+        start.parent = None
+        start.moved = None
+        visited = {hash(start)}
+        stack = [start]
 
-        # Out of depth, so stop early.
-        if depth <= 0:
-            return None
+        # Run the DFS.
+        while stack:
+            # Get next state to expand.
+            s = stack.pop()
+            if depth is not None:
+                depth += 1
 
-        # Augment stop list.
-        self.visited[hash(self)] = depth
+            # Try to expand each child.
+            ms = s.moves()
 
-        def move_defect(m):
-            (f, t) = m
-            self.move((f, t))
-            result = self.defect()
-            self.move((t, f))
-            return result
+            # Sort if desired.
+            if heur:
 
-        # Find next depth.
-        if depth == None:
-            d = None
-        else:
-            d = depth - 1
+                def move_defect(m):
+                    (f, t) = m
+                    s.move((f, t))
+                    result = s.defect()
+                    s.move((t, f))
+                    return result
 
-        # Recursive search.
-        ms = self.moves()
-        if heur:
-            ms.sort(key=move_defect)
-        for m in ms:
-            # Do-undo.
-            (f, t) = m
-            self.move((f, t))
+                ms.sort(key=move_defect)
 
-            # If new state, search it.
-            h = hash(self)
-            if h not in self.visited:
-                # Recursively solve.
-                soln = self.solve_dfs(depth=d, heur=heur)
-                if soln != None:
-                    # Undo.
-                    self.move((t, f))
-                    return [m] + soln
+            for m in ms:
+                # Make the child.
+                c = copy(s)
+                c.move(m)
 
-            # Undo.
-            self.move((t, f))
+                # Found a solution. Reconstruct and return
+                # it.
+                if c.solved():
+                    soln = [m]
+                    while True:
+                        s = s.parent
+                        if not s:
+                            break
+                        soln.append(s.moved)
+                    return list(reversed(soln))
 
-        # No solution found here.
-        return None
+                # Don't re-expand a closed state.
+                h = hash(c)
+                if h in visited:
+                    continue
+                
+                # Adjust and check depth.
+                if depth is not None:
+                    depth -= 1
+                    if depth <= 0:
+                        raise DepthException
+
+                # Expand and stack this child.
+                c.parent = s
+                c.moved = m
+                visited.add(h)
+                stack.append(c)
+
 
     # Solve via A* search.
     def solve_astar(self):
         # Set up start state as with BFS.
         start = copy(self)
         start.parent = None
-        start.move = None
+        start.moved = None
         # Stop list needs to be dictionary so states
         # can be updated/reopened.
         visited = {hash(start): start}
@@ -440,8 +460,8 @@ class Puzzle(object):
                 g = s.g
                 states = {s}
                 while True:
-                    if s.move:
-                        soln.append(s.move)
+                    if s.moved:
+                        soln.append(s.moved)
                     s = s.parent
                     if not s.parent:
                         break
@@ -464,7 +484,7 @@ class Puzzle(object):
                 hh = hash(c)
                 if hh not in visited or visited[hh].f > s.f:
                     c.parent = s
-                    c.move = m
+                    c.moved = m
                     visited[hh] = c
                     heapq.heappush(q, Pstate(c.f, c))
 
@@ -494,6 +514,7 @@ solvers = {
     "walk",
     "bfs",
     "dfs",
+    "hdfs",
     "dfid",
     "astar"
 }
@@ -530,6 +551,8 @@ elif solver == "bfs":
 elif solver == "dfid":
     soln = p.solve_dfid()
 elif solver == "dfs":
+    soln = p.solve_dfs()
+elif solver == "hdfs":
     soln = p.solve_dfs(heur=True)
 elif solver == "astar":
     soln = p.solve_astar()
