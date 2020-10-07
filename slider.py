@@ -377,7 +377,7 @@ class Puzzle(object):
         start.parent = None
         start.moved = None
         start.depth = 0
-        visited = {hash(start)}
+        visited = {hash(start): 0}
         stack = [start]
         limit = False
 
@@ -411,16 +411,15 @@ class Puzzle(object):
                 # Found a solution. Reconstruct and return
                 # it.
                 if c.solved():
-                    soln = []
+                    soln = [m]
                     while s.moved:
                         soln.append(s.moved)
                         s = s.parent
-                    soln.append(m)
                     return list(reversed(soln))
                 
                 # Don't re-expand a closed state.
                 h = hash(c)
-                if h in visited:
+                if h in visited and visited[h] <= s.depth:
                     continue
 
                 # Expand and stack this child.
@@ -434,8 +433,10 @@ class Puzzle(object):
                         limit = True
                         continue
 
-                visited.add(h)
                 stack.append(c)
+
+            h = hash(s)
+            visited[h] = s.depth
 
         if limit:
             raise DepthException
