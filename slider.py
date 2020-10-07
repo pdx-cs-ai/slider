@@ -397,7 +397,9 @@ class Puzzle(object):
                     s.move((t, f))
                     return result
 
-                ms.sort(key=move_defect)
+                # XXX Because of stacking the moves, want to
+                # push worst-first.
+                ms.sort(key=move_defect, reverse=True)
 
             for m in ms:
                 # Make the child.
