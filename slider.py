@@ -189,6 +189,7 @@ class Puzzle(object):
                 return False
         return True
 
+    # Total Manhattan Distance heuristic.
     def defect(self):
         n = self.n
         d = 0
@@ -392,12 +393,14 @@ class Puzzle(object):
             # Sort if desired.
             if heur:
 
+                # Manhattan Distance heuristic for move.
                 def move_defect(m):
                     (f, t) = m
                     s.move((f, t))
-                    result = s.defect()
+                    defect = s.defect()
                     s.move((t, f))
-                    return result
+                    piece = self.puzzle[f[0]][f[1]]
+                    return (defect, -piece)
 
                 # XXX Because of stacking the moves, want to
                 # push worst-first.
