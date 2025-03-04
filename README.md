@@ -10,8 +10,9 @@ Say `python3 slider.py --help` for program arguments.
 
 Solvers:
 
-* random: Do a random walk through the state space, with a
-  tabu list to try to avoid previous states
+* random: Do a random walk through the state space
+
+* tabu: Use a tabu list to try to avoid previous states
 
 * walk: Local search with a heuristic greedy walk with noise
   moves, no tabu list
